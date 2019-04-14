@@ -1,0 +1,128 @@
+#!/usr/bin/env python3
+
+import time
+import math
+import curses
+import datetime
+
+work_time  = 1500      # 25 min
+break_time = 300       # 5 min
+long_break_time = 1800 # 30 min
+work_time_cycle = 4    # 4 x work + short break sessions before long break
+
+i = {
+	"working": "working",
+	"short":   "short break",
+	"long":    "lengthy break",
+	"pause":   "stopped"
+}
+
+class timer(object):
+	def __init__(self, stdscr):
+		self.scr     = stdscr
+		self.exit    = False
+		self.full_reset()
+
+	def full_reset(self):
+		self.running = True
+		self.current_second = 1
+		self.timer   = work_time
+		self.cycles  = work_time_cycle
+		self.mode   = "working"
+
+	def soft_reset(self):
+		self.running = True
+		self.current_second = 1
+		self.timer  = work_time
+		self.mode   = "working"
+
+	def run(self):
+		while not self.exit:
+			c = self.scr.getch()
+			curses.flushinp()
+
+			# input handler
+			if   c == ord('q'):
+				self.exit = True
+			elif c == ord(' '):
+				self.running = not self.running
+			elif c == ord('r'):
+				# restart current work time
+				self.soft_reset()
+
+			# timer
+			if self.running:
+				self.current_second -= 0.1
+
+				if self.current_second <= 0:
+					self.current_second = 1
+					self.timer -= 1
+
+				if self.timer < 0:
+					if self.mode == "working":
+						if self.cycles == 1:
+							self.timer  = long_break_time
+							self.mode   = "long"
+							self.cycles = work_time_cycle
+						else:
+							self.timer  = break_time
+							self.mode   = "short"
+							self.cycles -= 1
+
+					else:
+						self.timer = work_time
+						self.mode  = "working"
+
+			# draw screen
+			self.render()
+
+			# (uses 1/10 instead of 1
+			# for more responsive input)
+			time.sleep(0.1)
+
+	def render(self):
+		self.scr.clear()
+
+		w = self.scr.getmaxyx()[1]
+		h = self.scr.getmaxyx()[0]
+
+		y = math.floor(h/2)
+		x = math.floor(w/2-3)
+
+		text = ''
+
+		if self.running:
+			text = i[self.mode]
+		else:
+			text = i['pause']
+
+		tx = math.floor(w/2-len(text)/2)
+
+		minute, second = divmod(self.timer, 60)
+
+		display = "%02d:%02d" % (minute, second)
+
+		self.scr.addstr(y-1, x,  display)
+		self.scr.addstr(y+1, tx, text, curses.color_pair(1))
+
+
+def init(stdscr):
+	stdscr = curses.initscr()
+
+	curses.noecho()
+	curses.cbreak()
+	curses.curs_set(0)
+
+	stdscr.nodelay(True)
+	stdscr.keypad(True)
+
+	curses.init_pair(1, curses.COLOR_RED,	 curses.COLOR_BLACK)
+	# curses.init_pair(2, curses.COLOR_YELLOW, curses.COLOR_BLACK)
+
+	# arg = sys.argv[1] if len(sys.argv) > 1 else None
+
+	pomo = timer(stdscr)
+	pomo.run()
+
+if __name__ == '__main__':
+	curses.wrapper(init)
