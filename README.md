@@ -26,6 +26,23 @@ pomo counts down from 25 minutes four times, giving you a 5 minute break between
 
   pauses/resumes pomo wherever it may be
 
+## pomo.conf
+
+`pomo.conf` is a simple list of all pomo's parameters.
+
+```
+work_time       1500
+break_time      300
+long_break_time 1800
+work_time_cycle 4
+working         working
+short           short break
+long            lengthy break
+pause           stopped
+```
+
+time periods are defined in seconds.  all strings can be replaced (free multi-language support!).  all parameters are optional.  if left out of the file, they will default to the above.
+
 ## installation
 
 macOS:
