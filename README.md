@@ -28,11 +28,13 @@ pomo counts down from 25 minutes four times, giving you a 5 minute break between
 
 ## installation
 
-macOS
+macOS:
 
 1.  move pomo to `/usr/local/bin`
+2.  `chmod u+x pomo`
+3.  copy `pomo.conf` to `.config/pomo/`
 
-2. `chmod u+x pomo`
+… or run `install.sh` from inside the repo.
 
 ## todo
 
@@ -42,4 +44,4 @@ macOS
 
 + `--help` flag
 
-+ install/makefile
++ ~~install/makefile~~ macOS only.
