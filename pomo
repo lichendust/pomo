@@ -4,36 +4,62 @@ import time
 import math
 import curses
 import datetime
+from os.path import expanduser
 
-work_time  = 1500      # 25 min
-break_time = 300       # 5 min
-long_break_time = 1800 # 30 min
-work_time_cycle = 4    # 4 x work + short break sessions before long break
-
-i = {
+# defaults
+s = {
+	"work_time":       1500, # 25 min
+	"break_time":      300,  # 5 min
+	"long_break_time": 1800, # 30 min
+	"work_time_cycle": 4,    # 4 x work + short break sessions before long break
 	"working": "working",
 	"short":   "short break",
 	"long":    "lengthy break",
 	"pause":   "stopped"
 }
 
+conf_path = expanduser('~/.config/pomo/pomo.conf')
+
+def toint(val):
+	try:
+		return int(val)
+	except ValueError:
+		return val
+
+def load_config():
+	conf = open(conf_path)
+
+	for line in conf.readlines():
+		list = line.split(' ',1)
+		key  = list[0]
+		val  = toint(list[1].strip())
+
+		s[key] = val
+
+
 class timer(object):
 	def __init__(self, stdscr):
 		self.scr     = stdscr
 		self.exit    = False
+
+		# use 1/10 for responsive input
+		self.time_step = .1
+
+		load_config()
+
 		self.full_reset()
 
 	def full_reset(self):
 		self.running = True
 		self.current_second = 1
-		self.timer   = work_time
-		self.cycles  = work_time_cycle
+		self.timer   = s["work_time"]
+		self.cycles  = s["work_time_cycle"]
 		self.mode   = "working"
 
 	def soft_reset(self):
 		self.running = True
 		self.current_second = 1
-		self.timer  = work_time
+		self.timer  = s["work_time"]
 		self.mode   = "working"
 
 	def run(self):
@@ -52,7 +78,7 @@ class timer(object):
 
 			# timer
 			if self.running:
-				self.current_second -= 0.1
+				self.current_second -= self.time_step
 
 				if self.current_second <= 0:
 					self.current_second = 1
@@ -61,24 +87,21 @@ class timer(object):
 				if self.timer < 0:
 					if self.mode == "working":
 						if self.cycles == 1:
-							self.timer  = long_break_time
+							self.timer  = s["long_break_time"]
 							self.mode   = "long"
-							self.cycles = work_time_cycle
+							self.cycles = s["work_time_cycle"]
 						else:
-							self.timer  = break_time
+							self.timer  = s["break_time"]
 							self.mode   = "short"
 							self.cycles -= 1
 
 					else:
-						self.timer = work_time
+						self.timer = s["work_time"]
 						self.mode  = "working"
 
 			# draw screen
 			self.render()
-
-			# (uses 1/10 instead of 1
-			# for more responsive input)
-			time.sleep(0.1)
+			time.sleep(self.time_step)
 
 	def render(self):
 		self.scr.clear()
@@ -92,9 +115,9 @@ class timer(object):
 		text = ''
 
 		if self.running:
-			text = i[self.mode]
+			text = s[self.mode]
 		else:
-			text = i['pause']
+			text = s["pause"]
 
 		tx = math.floor(w/2-len(text)/2)
 
@@ -103,8 +126,7 @@ class timer(object):
 		display = "%02d:%02d" % (minute, second)
 
 		self.scr.addstr(y-1, x,  display)
-		self.scr.addstr(y+1, tx, text, curses.color_pair(1))
-
+		self.scr.addstr(y, tx, text, curses.color_pair(1))
 
 def init(stdscr):
 	stdscr = curses.initscr()
@@ -116,10 +138,7 @@ def init(stdscr):
 	stdscr.nodelay(True)
 	stdscr.keypad(True)
 
-	curses.init_pair(1, curses.COLOR_RED,	 curses.COLOR_BLACK)
-	# curses.init_pair(2, curses.COLOR_YELLOW, curses.COLOR_BLACK)
-
-	# arg = sys.argv[1] if len(sys.argv) > 1 else None
+	curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
 
 	pomo = timer(stdscr)
 	pomo.run()

@@ -38,10 +38,7 @@ macOS
 
 + arguments
 
-  will allow overriding of default times at startup
-
-+ `~/.config/pomo/`
-  will allow customisation of default times and strings
++ ~~`~/.config/pomo/`~~
 
 + `--help` flag
 
