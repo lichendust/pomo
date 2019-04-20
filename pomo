@@ -13,7 +13,7 @@ work_time=1500
 break_time=300
 long_break_time=1800
 work_time_cycle=4
-s=("working" "smol break" "long break" "stopped")
+s=("working" "short break" "lengthy break" "stopped")
 
 load_config () {
 	CONFDIR="${CONFDIR/#\~/$HOME}"
@@ -69,11 +69,19 @@ clear_screen () {
 redraw () {
 	clear_screen
 
+	local ty="$((LINES/2))"
+	local tx="$((COLUMNS/2-2))"
+	local tw="${#s[$mode]}"
+
 	# print time
-	printf "%02d:%02d\n" "$[timer/60]" "$[timer%60]"
+	printf "\e[%sH\e[%sC%02d:%02d\n" \
+		   "$ty" "$tx" \
+		   "$[timer/60]" "$[timer%60]"
 
 	# print mode
-	printf "${s[$mode]}\n"
+	printf "\e[%sH\e[%sC%s\n" \
+		   "$[ty+1]" "$[tx-tw/2]" \
+		   "${s[$mode]}"
 }
 
 keypress () {
@@ -87,11 +95,11 @@ keypress () {
 	# parse key events
 	# @incomplete replace with switch
 	case $key in
-		q)
+		${key_quit:="q"})
 			exit
 		;;
 
-		p)
+		${key_pause:="p"})
 			# toggle between modes
 			[ $mode = 3 ] && mode=0 || mode=3
 		;;
