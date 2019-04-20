@@ -5,6 +5,9 @@
 # much code lifted from dylanaraps' fff
 # and lots of their pure-bash-bible
 
+VERSION="0.2.0"
+CONFDIR="~/.config/pomo/pomo.conf"
+
 # default config
 work_time=1500
 break_time=300
@@ -13,11 +16,9 @@ work_time_cycle=4
 s=("working" "smol break" "long break" "stopped")
 
 load_config () {
-	dir="~/.config"
-	dir="${dir/#\~/$HOME}"
-
-	if test -f ${dir}/pomo/pomo.conf ; then
-		. ${dir}/pomo/pomo.conf
+	CONFDIR="${CONFDIR/#\~/$HOME}"
+	if test -f ${CONFDIR}; then
+		. ${CONFDIR}
 	fi
 }
 
@@ -72,14 +73,12 @@ redraw () {
 	printf "%02d:%02d\n" "$[timer/60]" "$[timer%60]"
 
 	# print mode
-	# @incomplete read from list in conf
-	printf "$test"
-	printf "$mode"
+	printf "${s[$mode]}\n"
 }
 
 keypress () {
 	# check for key events
-	if ((mode<3)); then
+	if ((mode<2)); then
 		read -t 1 -n 1 key
 	else
 		read -n 1 key
@@ -94,15 +93,43 @@ keypress () {
 
 		p)
 			# toggle between modes
-			[ $mode = 3 ] && mode=1 || mode=3
+			[ $mode = 3 ] && mode=0 || mode=3
 		;;
 	esac
 }
 
+display_help () {
+	echo ""
+	echo "    pomo "${VERSION}
+	echo ""
+	echo "    ARGUMENTS"
+	echo "    -c  --config   opens config in "${EDITOR}
+	echo "    -v  --version  shows pomo version"
+	echo "    -h  --help     shows this screen"
+	echo ""
+	echo "    KEYBINDINGS"
+	echo "    q  quit"
+	echo "    p  pause"
+	echo "    r  restart current stretch"
+	echo ""
+}
+
 main () {
+	# open conf with -c
+	[ "$1" = -c ] || [ "$1" = --config ] && {
+		${EDITOR} ${CONFDIR}
+		exit
+	}
+
 	# print version with -v
-	[[ $1 == -v ]] && {
-		printf '%s\n' "pomo 0.2.0"
+	[ "$1" = -v ] || [ "$1" = --version ] && {
+		echo "pomo "${VERSION}
+		exit
+	}
+
+	# print help with -h
+	[ "$1" = -h ] || [ "$1" = --help ] && {
+		display_help
 		exit
 	}
 
@@ -118,7 +145,7 @@ main () {
 
 	# init timer
 	timer=$work_time
-	mode=1
+	mode=0
 
 	# initial draw
 	redraw
@@ -133,12 +160,12 @@ main () {
 		timer=$[timer-1]
 
 		if ((timer<0)); then
-			if ((mode==1)); then
+			if ((mode==0)); then
 				timer=$break_time
-				mode=2
-			elif ((mode==2)); then
-				timer=$work_time
 				mode=1
+			elif ((mode==1)); then
+				timer=$work_time
+				mode=0
 			fi
 		fi
 
