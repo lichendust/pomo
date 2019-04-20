@@ -8,6 +8,8 @@ pomo counts down from 25 minutes four times, giving you a 5 minute break between
 
 (very quickly) written in pycurses.
 
+update: pomo is being rewritten in pure bash.  see `bash` branch for progress.
+
 ## usage
 
 `pomo`
@@ -57,8 +59,8 @@ macOS:
 
 + arguments
 
-+ ~~`~/.config/pomo/`~~
-
 + `--help` flag
+
++ ~~`~/.config/pomo/`~~
 
 + ~~install/makefile~~ macOS only.
