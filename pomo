@@ -155,29 +155,35 @@ main () {
 
 	# init timer
 	timer=$work_time
+	counter=$work_time_cycle
 	mode=0
-
-	# initial draw
-	redraw
 
 	while true
 	do
 		# exit if terminal is killed
 		[[ -t 1 ]] || exit 1
 
+		redraw
+
 		timer=$[timer-1]
 
 		if ((timer<0)); then
 			if ((mode==0)); then
-				timer=$break_time
-				mode=1
-			elif ((mode==1)); then
+				counter=$[counter-1]
+
+				if ((counter==0)); then
+					counter=$work_time_cycle
+					timer=$long_break_time
+					mode=2
+				else
+					timer=$break_time
+					mode=1
+				fi
+			else
 				timer=$work_time
 				mode=0
 			fi
 		fi
-
-		redraw
 
 		sleep 1
 	done
