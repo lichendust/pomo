@@ -70,16 +70,18 @@ redraw () {
 	clear_screen
 
 	local ty="$((LINES/2))"
-	local tx="$((COLUMNS/2-2))"
+	local tx="$((COLUMNS/2))"
 	local tw="${#s[$mode]}"
 
 	# print time
-	printf "\e[%sH\e[%sC%02d:%02d\n" \
-		   "$ty" "$tx" \
+	printf "\u001b[%sm\e[%sH\e[%sC%02d:%02d\n" \
+		   "$timer_col" \
+		   "$ty" "$[tx-2]" \
 		   "$[timer/60]" "$[timer%60]"
 
 	# print mode
-	printf "\e[%sH\e[%sC%s\n" \
+	printf "\u001b[%sm\e[%sH\e[%sC%s\n" \
+		   "$text_col" \
 		   "$[ty+1]" "$[tx-tw/2]" \
 		   "${s[$mode]}"
 }
@@ -115,11 +117,11 @@ display_help () {
 	echo "    -v  --version  shows pomo version"
 	echo "    -h  --help     shows this screen"
 	echo ""
-	echo "    KEYBINDINGS"
-	echo "    q  quit"
-	echo "    p  pause"
-	echo "    r  restart current stretch"
-	echo ""
+	# echo "    KEYBINDINGS"
+	# echo "    q  quit"
+	# echo "    p  pause"
+	# echo "    r  restart current stretch"
+	# echo ""
 }
 
 main () {
@@ -163,8 +165,6 @@ main () {
 		# exit if terminal is killed
 		[[ -t 1 ]] || exit 1
 
-		keypress
-
 		timer=$[timer-1]
 
 		if ((timer<0)); then
@@ -179,7 +179,7 @@ main () {
 
 		redraw
 
-		# sleep 1
+		sleep 1
 	done
 }
 
