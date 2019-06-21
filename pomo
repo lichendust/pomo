@@ -99,9 +99,9 @@ display_help () {
 	echo "    -h  --help     shows this screen"
 	echo ""
 	echo "    KEYBINDINGS"
-	echo "    q  quit"
-	echo "    p  pause"
-	echo "    r  restart current stretch (1 work + 1 break)"
+	echo "    q      quit"
+	echo "    space  pause"
+	echo "    r      restart current stretch (1 work + 1 break)"
 	echo ""
 }
 
