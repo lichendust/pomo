@@ -5,7 +5,7 @@
 # much code lifted from dylanaraps' fff
 # and lots of their pure-bash-bible
 
-VERSION="0.3.0"
+VERSION="0.3.1"
 CONFDIR="~/.config/pomo/pomo.conf"
 
 # default config
@@ -14,6 +14,9 @@ break_time=300
 long_break_time=1800
 work_time_cycle=4
 s=("working" "short break" "lengthy break" "stopped")
+key_quit="q"
+key_pause=" "
+key_restart="r"
 
 load_config () {
 	CONFDIR="${CONFDIR/#\~/$HOME}"
@@ -86,8 +89,6 @@ redraw () {
 		   "${s[$mode]}"
 }
 
-}
-
 display_help () {
 	echo ""
 	echo "    pomo "${VERSION}
@@ -148,7 +149,7 @@ main () {
 		read -t 0.1 -N 1 input
 
 		# pause
-		if [[ $input = " " ]]; then
+		if [[ $input = $key_pause ]]; then
 			if ((mode<3)); then
 				stored_mode=$mode
 				mode=3
@@ -158,12 +159,12 @@ main () {
 		fi
 
 		# restart current set
-		if [[ $input = "r" ]] || [[ $input = "R" ]]; then
+		if [[ $input = $key_restart ]]; then
 			timer=$work_time
 		fi
 
 		# quit
-		if [[ $input = "q" ]] || [[ $input = "Q" ]]; then
+		if [[ $input = $key_quit ]]; then
 			break
 		fi
 
