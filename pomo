@@ -5,7 +5,7 @@
 # much code lifted from dylanaraps' fff
 # and lots of their pure-bash-bible
 
-VERSION="0.2.0"
+VERSION="0.3.0"
 CONFDIR="~/.config/pomo/pomo.conf"
 
 # default config
@@ -86,26 +86,6 @@ redraw () {
 		   "${s[$mode]}"
 }
 
-keypress () {
-	# check for key events
-	if ((mode<2)); then
-		read -t 1 -n 1 key
-	else
-		read -n 1 key
-	fi
-
-	# parse key events
-	# @incomplete replace with switch
-	case $key in
-		${key_quit:="q"})
-			exit
-		;;
-
-		${key_pause:="p"})
-			# toggle between modes
-			[ $mode = 3 ] && mode=0 || mode=3
-		;;
-	esac
 }
 
 display_help () {
@@ -117,11 +97,11 @@ display_help () {
 	echo "    -v  --version  shows pomo version"
 	echo "    -h  --help     shows this screen"
 	echo ""
-	# echo "    KEYBINDINGS"
-	# echo "    q  quit"
-	# echo "    p  pause"
-	# echo "    r  restart current stretch"
-	# echo ""
+	echo "    KEYBINDINGS"
+	echo "    q  quit"
+	echo "    p  pause"
+	echo "    r  restart current stretch (1 work + 1 break)"
+	echo ""
 }
 
 main () {
@@ -157,14 +137,41 @@ main () {
 	timer=$work_time
 	counter=$work_time_cycle
 	mode=0
+	stored_mode=0
 
 	while true; do
 		# exit if terminal is killed
 		[[ -t 1 ]] || exit 1
 
+		# jank timer/input logic
+		sleep .9
+		read -t 0.1 -N 1 input
+
+		# pause
+		if [[ $input = " " ]]; then
+			if ((mode<3)); then
+				stored_mode=$mode
+				mode=3
+			else
+				mode=$stored_mode
+			fi
+		fi
+
+		# restart current set
+		if [[ $input = "r" ]] || [[ $input = "R" ]]; then
+			timer=$work_time
+		fi
+
+		# quit
+		if [[ $input = "q" ]] || [[ $input = "Q" ]]; then
+			break
+		fi
+
 		redraw
 
-		timer=$[timer-1]
+		if ((mode<3)); then
+			timer=$[timer-1]
+		fi
 
 		if ((timer<0)); then
 			if ((mode==0)); then
@@ -183,8 +190,6 @@ main () {
 				mode=0
 			fi
 		fi
-
-		sleep 1
 	done
 }
 

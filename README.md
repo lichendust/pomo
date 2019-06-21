@@ -18,6 +18,14 @@ pomo is pure bash with no dependencies.
 
 `-h --help` prints a help message
 
+## keybindings
+
+`space` pauses pomo
+
+`r` restarts current stretch (1 work + 1 break pair)
+
+`q` quits pomo
+
 ## pomo.conf
 
 `pomo.conf` is a simple list of all pomo's parameters.
