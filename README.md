@@ -51,8 +51,4 @@ macOS:
 2.  `chmod u+x pomo`
 3.  copy `pomo.conf` to `.config/pomo/`
 
-… or run `install.sh` from inside the repo (macOS only).
-
-## todo
-
-+ override time w arguments
+...or run `install.sh` from inside the repo.
