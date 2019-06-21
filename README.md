@@ -1,12 +1,12 @@
 # pomo
 
-a tiny lil pomodoro timer for your terminal
+a tiny lil pomodoro timer for your terminal — except it's in bash now.
 
 ![](img/pomo.jpg)
 
 pomo counts down from 25 minutes four times, giving you a 5 minute break between each.  after the four cycles, it gives you a 30 minute break.
 
-(very quickly) written in pycurses.
+pomo is pure bash with no dependencies.
 
 update: pomo is being rewritten in pure bash.  see `bash` branch for progress.
 
@@ -14,33 +14,33 @@ update: pomo is being rewritten in pure bash.  see `bash` branch for progress.
 
 `pomo`
 
-##### keys:
+`-v --version` prints version
 
-+ `q`
+`-c --config` opens config file in `$EDITOR`
 
-  quits pomo
+`-h --help` prints a help message
 
-+ `r`
+## keybindings
 
-  restarts the current working period (inc. the following break)
+`space` pauses pomo
 
-+ `space`
+`r` restarts current stretch (1 work + 1 break pair)
 
-  pauses/resumes pomo wherever it may be
+`q` quits pomo
 
 ## pomo.conf
 
 `pomo.conf` is a simple list of all pomo's parameters.
 
-```
-work_time       1500
-break_time      300
-long_break_time 1800
-work_time_cycle 4
-working         working
-short           short break
-long            lengthy break
-pause           stopped
+```bash
+# pomo.conf
+timer_col=37  # white
+text_col=31   # red
+work_time=1500
+break_time=300
+long_break_time=1800
+work_time_cycle=4
+i=("working" "short break" "lengthy break" "stopped")
 ```
 
 time periods are defined in seconds.  all strings can be replaced (free multi-language support!).  all parameters are optional.  if left out of the file, they will default to the above.
@@ -53,14 +53,4 @@ macOS:
 2.  `chmod u+x pomo`
 3.  copy `pomo.conf` to `.config/pomo/`
 
-… or run `install.sh` from inside the repo.
-
-## todo
-
-+ arguments
-
-+ `--help` flag
-
-+ ~~`~/.config/pomo/`~~
-
-+ ~~install/makefile~~ macOS only.
+...or run `install.sh` from inside the repo.

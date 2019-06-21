@@ -1,147 +1,196 @@
-#!/usr/bin/env python3
+#!/usr/bin/env bash
+# pomo
+# bash 4+ pls
 
-import time
-import math
-import curses
-import datetime
-from os.path import expanduser
+# much code lifted from dylanaraps' fff
+# and lots of their pure-bash-bible
 
-# defaults
-s = {
-	"work_time":       1500, # 25 min
-	"break_time":      300,  # 5 min
-	"long_break_time": 1800, # 30 min
-	"work_time_cycle": 4,    # 4 x work + short break sessions before long break
-	"working": "working",
-	"short":   "short break",
-	"long":    "lengthy break",
-	"pause":   "stopped"
+VERSION="0.3.0"
+CONFDIR="~/.config/pomo/pomo.conf"
+
+# default config
+work_time=1500
+break_time=300
+long_break_time=1800
+work_time_cycle=4
+s=("working" "short break" "lengthy break" "stopped")
+
+load_config () {
+	CONFDIR="${CONFDIR/#\~/$HOME}"
+	if test -f ${CONFDIR}; then
+		. ${CONFDIR}
+	fi
 }
 
-conf_path = expanduser('~/.config/pomo/pomo.conf')
+get_term_size () {
+	read -r LINES COLUMNS < <(stty size)
+}
 
-def toint(val):
-	try:
-		return int(val)
-	except ValueError:
-		return val
+setup_terminal () {
+	# set up the terminal for the TUI
+	# \e[?1049h  use alternative screen buffer
+	# \e[?7l     disable line wrapping
+	# \e[?25l    hide the cursor
+	# \e[2J      clear the screen
+	# \e[1;Nr    limit scrolling to scrolling area
+	#            also sets cursor to (0,0)
+	printf '\e[?1049h\e[?7l\e[?25l\e[2J\e[1;%sr' "$max_items"
 
-def load_config():
-	conf = open(conf_path)
+	# hide echoing of user input
+	stty -echo
+}
 
-	for line in conf.readlines():
-		list = line.split(' ',1)
-		key  = list[0]
-		val  = toint(list[1].strip())
+reset_terminal () {
+	# reset the terminal to a useable state (undo all changes)
+	# \e[?7h     re-enable line wrapping
+	# \e[?25h    unhide the cursor
+	# \e[2J      clear the terminal
+	# \e[;r      set the scroll region to its default value
+	#            also sets cursor to (0,0)
+	# \e[?1049l  restore main screen buffer
+	printf '\e[?7h\e[?25h\e[2J\e[;r\e[?1049l'
 
-		s[key] = val
+	# show user input
+	stty echo
+}
 
+clear_screen () {
+	# only clear the scrolling window (dir item list)
+	# \e[%sH    move cursor to bottom of scroll area
+	# \e[9999C  move cursor to right edge of the terminal
+	# \e[1J     clear screen to top left corner (from cursor up)
+	# \e[2J     clear screen fully (if using tmux) (fixes clear issues)
+	# \e[1;%sr  clearing the screen resets the scroll region(?) Reset it
+	#           also sets cursor to (0,0).
+	printf '\e[%sH\e[9999C\e[1J%b\e[1;%sr' \
+		   "$((LINES-2))" "${TMUX:+\e[2J}" "$max_items"
+}
 
-class timer(object):
-	def __init__(self, stdscr):
-		self.scr     = stdscr
-		self.exit    = False
+redraw () {
+	clear_screen
 
-		# use 1/10 for responsive input
-		self.time_step = .1
+	local ty="$((LINES/2))"
+	local tx="$((COLUMNS/2))"
+	local tw="${#s[$mode]}"
 
-		load_config()
+	# print time
+	printf "\u001b[%sm\e[%sH\e[%sC%02d:%02d\n" \
+		   "$timer_col" \
+		   "$ty" "$[tx-2]" \
+		   "$[timer/60]" "$[timer%60]"
 
-		self.full_reset()
+	# print mode
+	printf "\u001b[%sm\e[%sH\e[%sC%s\n" \
+		   "$text_col" \
+		   "$[ty+1]" "$[tx-tw/2]" \
+		   "${s[$mode]}"
+}
 
-	def full_reset(self):
-		self.running = True
-		self.current_second = 1
-		self.timer   = s["work_time"]
-		self.cycles  = s["work_time_cycle"]
-		self.mode   = "working"
+}
 
-	def soft_reset(self):
-		self.running = True
-		self.current_second = 1
-		self.timer  = s["work_time"]
-		self.mode   = "working"
+display_help () {
+	echo ""
+	echo "    pomo "${VERSION}
+	echo ""
+	echo "    ARGUMENTS"
+	echo "    -c  --config   opens config in "${EDITOR}
+	echo "    -v  --version  shows pomo version"
+	echo "    -h  --help     shows this screen"
+	echo ""
+	echo "    KEYBINDINGS"
+	echo "    q  quit"
+	echo "    p  pause"
+	echo "    r  restart current stretch (1 work + 1 break)"
+	echo ""
+}
 
-	def run(self):
-		while not self.exit:
-			c = self.scr.getch()
-			curses.flushinp()
+main () {
+	# open conf with -c
+	[ "$1" = -c ] || [ "$1" = --config ] && {
+		${EDITOR} ${CONFDIR}
+		exit
+	}
 
-			# input handler
-			if   c == ord('q'):
-				self.exit = True
-			elif c == ord(' '):
-				self.running = not self.running
-			elif c == ord('r'):
-				# restart current work time
-				self.soft_reset()
+	# print version with -v
+	[ "$1" = -v ] || [ "$1" = --version ] && {
+		echo "pomo "${VERSION}
+		exit
+	}
 
-			# timer
-			if self.running:
-				self.current_second -= self.time_step
+	# print help with -h
+	[ "$1" = -h ] || [ "$1" = --help ] && {
+		display_help
+		exit
+	}
 
-				if self.current_second <= 0:
-					self.current_second = 1
-					self.timer -= 1
+	# trap exit signal with a reset
+	trap 'reset_terminal' EXIT
 
-				if self.timer < 0:
-					if self.mode == "working":
-						if self.cycles == 1:
-							self.timer  = s["long_break_time"]
-							self.mode   = "long"
-							self.cycles = s["work_time_cycle"]
-						else:
-							self.timer  = s["break_time"]
-							self.mode   = "short"
-							self.cycles -= 1
+	# trap window resize
+	trap 'get_term_size; redraw' WINCH
 
-					else:
-						self.timer = s["work_time"]
-						self.mode  = "working"
+	load_config
+	get_term_size
+	setup_terminal
 
-			# draw screen
-			self.render()
-			time.sleep(self.time_step)
+	# init timer
+	timer=$work_time
+	counter=$work_time_cycle
+	mode=0
+	stored_mode=0
 
-	def render(self):
-		self.scr.clear()
+	while true; do
+		# exit if terminal is killed
+		[[ -t 1 ]] || exit 1
 
-		w = self.scr.getmaxyx()[1]
-		h = self.scr.getmaxyx()[0]
+		# jank timer/input logic
+		sleep .9
+		read -t 0.1 -N 1 input
 
-		y = math.floor(h/2)
-		x = math.floor(w/2-3)
+		# pause
+		if [[ $input = " " ]]; then
+			if ((mode<3)); then
+				stored_mode=$mode
+				mode=3
+			else
+				mode=$stored_mode
+			fi
+		fi
 
-		text = ''
+		# restart current set
+		if [[ $input = "r" ]] || [[ $input = "R" ]]; then
+			timer=$work_time
+		fi
 
-		if self.running:
-			text = s[self.mode]
-		else:
-			text = s["pause"]
+		# quit
+		if [[ $input = "q" ]] || [[ $input = "Q" ]]; then
+			break
+		fi
 
-		tx = math.floor(w/2-len(text)/2)
+		redraw
 
-		minute, second = divmod(self.timer, 60)
+		if ((mode<3)); then
+			timer=$[timer-1]
+		fi
 
-		display = "%02d:%02d" % (minute, second)
+		if ((timer<0)); then
+			if ((mode==0)); then
+				counter=$[counter-1]
 
-		self.scr.addstr(y-1, x,  display)
-		self.scr.addstr(y, tx, text, curses.color_pair(1))
+				if ((counter==0)); then
+					counter=$work_time_cycle
+					timer=$long_break_time
+					mode=2
+				else
+					timer=$break_time
+					mode=1
+				fi
+			else
+				timer=$work_time
+				mode=0
+			fi
+		fi
+	done
+}
 
-def init(stdscr):
-	stdscr = curses.initscr()
-
-	curses.noecho()
-	curses.cbreak()
-	curses.curs_set(0)
-
-	stdscr.nodelay(True)
-	stdscr.keypad(True)
-
-	curses.init_pair(1, curses.COLOR_RED, curses.COLOR_BLACK)
-
-	pomo = timer(stdscr)
-	pomo.run()
-
-if __name__ == '__main__':
-	curses.wrapper(init)
+main "$@"
