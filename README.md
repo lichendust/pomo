@@ -34,12 +34,15 @@ update: pomo is being rewritten in pure bash.  see `bash` branch for progress.
 
 ```bash
 # pomo.conf
-timer_col=37  # white
-text_col=31   # red
+timer_col=37           # white
+text_col=31            # red
 work_time=1500
 break_time=300
 long_break_time=1800
 work_time_cycle=4
+key_quit="q"
+key_pause=" " #spacebar
+key_restart="r"
 i=("working" "short break" "lengthy break" "stopped")
 ```
 
