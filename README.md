@@ -8,8 +8,6 @@ pomo counts down from 25 minutes four times, giving you a 5 minute break between
 
 pomo is pure bash with no dependencies.
 
-update: pomo is being rewritten in pure bash.  see `bash` branch for progress.
-
 ## usage
 
 `pomo`
