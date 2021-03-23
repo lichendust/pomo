@@ -5,25 +5,15 @@
 # much code lifted from dylanaraps' fff
 # and lots of their pure-bash-bible
 
-VERSION="0.3.1"
-CONFDIR="~/.config/pomo/pomo.conf"
+VERSION="0.4.0"
 
-# default config
+timer_col=37   # white
+text_col=31    # red
 work_time=1500
 break_time=300
 long_break_time=1800
 work_time_cycle=4
-s=("working" "short break" "lengthy break" "stopped")
-key_quit="q"
-key_pause=" "
-key_restart="r"
-
-load_config () {
-	CONFDIR="${CONFDIR/#\~/$HOME}"
-	if test -f ${CONFDIR}; then
-		. ${CONFDIR}
-	fi
-}
+s=("working" "break" "tea break")
 
 get_term_size () {
 	read -r LINES COLUMNS < <(stty size)
@@ -106,12 +96,6 @@ display_help () {
 }
 
 main () {
-	# open conf with -c
-	[ "$1" = -c ] || [ "$1" = --config ] && {
-		${EDITOR} ${CONFDIR}
-		exit
-	}
-
 	# print version with -v
 	[ "$1" = -v ] || [ "$1" = --version ] && {
 		echo "pomo "${VERSION}
@@ -130,7 +114,6 @@ main () {
 	# trap window resize
 	trap 'get_term_size; redraw' WINCH
 
-	load_config
 	get_term_size
 	setup_terminal
 
@@ -143,30 +126,6 @@ main () {
 	while true; do
 		# exit if terminal is killed
 		[[ -t 1 ]] || exit 1
-
-		# jank timer/input logic
-		sleep .9
-		read -t 0.1 -N 1 input
-
-		# pause
-		if [[ $input = $key_pause ]]; then
-			if ((mode<3)); then
-				stored_mode=$mode
-				mode=3
-			else
-				mode=$stored_mode
-			fi
-		fi
-
-		# restart current set
-		if [[ $input = $key_restart ]]; then
-			timer=$work_time
-		fi
-
-		# quit
-		if [[ $input = $key_quit ]]; then
-			break
-		fi
 
 		redraw
 
@@ -191,6 +150,8 @@ main () {
 				mode=0
 			fi
 		fi
+
+		sleep 1
 	done
 }
 
