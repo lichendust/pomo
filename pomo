@@ -5,7 +5,7 @@
 # much code lifted from dylanaraps' fff
 # and lots of their pure-bash-bible
 
-VERSION="0.4.0"
+VERSION="0.5.0"
 
 timer_col=37   # white
 text_col=31    # red
@@ -15,119 +15,73 @@ long_break_time=1800
 work_time_cycle=4
 s=("working" "break" "tea break")
 
-get_term_size () {
+bell() {
+	echo -e '\a'
+}
+
+tsize() {
 	read -r LINES COLUMNS < <(stty size)
 }
 
-setup_terminal () {
-	# set up the terminal for the TUI
-	# \e[?1049h  use alternative screen buffer
-	# \e[?7l     disable line wrapping
-	# \e[?25l    hide the cursor
-	# \e[2J      clear the screen
-	# \e[1;Nr    limit scrolling to scrolling area
-	#            also sets cursor to (0,0)
+start() {
 	printf '\e[?1049h\e[?7l\e[?25l\e[2J\e[1;%sr' "$max_items"
-
-	# hide echoing of user input
 	stty -echo
 }
 
-reset_terminal () {
-	# reset the terminal to a useable state (undo all changes)
-	# \e[?7h     re-enable line wrapping
-	# \e[?25h    unhide the cursor
-	# \e[2J      clear the terminal
-	# \e[;r      set the scroll region to its default value
-	#            also sets cursor to (0,0)
-	# \e[?1049l  restore main screen buffer
+close() {
 	printf '\e[?7h\e[?25h\e[2J\e[;r\e[?1049l'
-
-	# show user input
 	stty echo
 }
 
-clear_screen () {
-	# only clear the scrolling window (dir item list)
-	# \e[%sH    move cursor to bottom of scroll area
-	# \e[9999C  move cursor to right edge of the terminal
-	# \e[1J     clear screen to top left corner (from cursor up)
-	# \e[2J     clear screen fully (if using tmux) (fixes clear issues)
-	# \e[1;%sr  clearing the screen resets the scroll region(?) Reset it
-	#           also sets cursor to (0,0).
-	printf '\e[%sH\e[9999C\e[1J%b\e[1;%sr' \
-		   "$((LINES-2))" "${TMUX:+\e[2J}" "$max_items"
+cls() {
+	printf '\e[%sH\e[9999C\e[1J%b\e[1;%sr' "$((LINES-2))" "${TMUX:+\e[2J}" "$max_items"
 }
 
-redraw () {
-	clear_screen
+draw() {
+	cls
 
 	local ty="$((LINES/2))"
 	local tx="$((COLUMNS/2))"
 	local tw="${#s[$mode]}"
 
-	# print time
 	printf "\u001b[%sm\e[%sH\e[%sC%02d:%02d\n" \
 		   "$timer_col" \
 		   "$ty" "$[tx-2]" \
 		   "$[timer/60]" "$[timer%60]"
 
-	# print mode
 	printf "\u001b[%sm\e[%sH\e[%sC%s\n" \
 		   "$text_col" \
 		   "$[ty+1]" "$[tx-tw/2]" \
 		   "${s[$mode]}"
 }
 
-display_help () {
-	echo ""
+usage() {
+	echo
 	echo "    pomo "${VERSION}
-	echo ""
-	echo "    ARGUMENTS"
-	echo "    -c  --config   opens config in "${EDITOR}
+	echo
 	echo "    -v  --version  shows pomo version"
 	echo "    -h  --help     shows this screen"
-	echo ""
-	echo "    KEYBINDINGS"
-	echo "    q      quit"
-	echo "    space  pause"
-	echo "    r      restart current stretch (1 work + 1 break)"
-	echo ""
+	echo
 }
 
-main () {
-	# print version with -v
-	[ "$1" = -v ] || [ "$1" = --version ] && {
-		echo "pomo "${VERSION}
-		exit
-	}
+main() {
+	[ "$1" = -v ] || [ "$1" = --version ] && echo "pomo "${VERSION} && exit
+	[ "$1" = -h ] || [ "$1" = --help ] && usage && exit
 
-	# print help with -h
-	[ "$1" = -h ] || [ "$1" = --help ] && {
-		display_help
-		exit
-	}
+	trap 'close' EXIT
+	trap 'tsize; draw' WINCH
 
-	# trap exit signal with a reset
-	trap 'reset_terminal' EXIT
+	tsize
+	start
 
-	# trap window resize
-	trap 'get_term_size; redraw' WINCH
-
-	get_term_size
-	setup_terminal
-
-	# init timer
 	timer=$work_time
 	counter=$work_time_cycle
 	mode=0
-	stored_mode=0
 
 	while true; do
-		# exit if terminal is killed
 		[[ -t 1 ]] || exit 1
 
-		redraw
+		draw
 
 		if ((mode<3)); then
 			timer=$[timer-1]
@@ -141,13 +95,16 @@ main () {
 					counter=$work_time_cycle
 					timer=$long_break_time
 					mode=2
+					bell
 				else
 					timer=$break_time
 					mode=1
+					bell
 				fi
 			else
 				timer=$work_time
 				mode=0
+				bell
 			fi
 		fi
 
